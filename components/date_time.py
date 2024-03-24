@@ -1,54 +1,30 @@
 
 from PyQt5.QtCore import *
-# import datetime
-
-# # Get the current date and time
-# current_time = datetime.datetime.now()
-
-# # Get the day of the week (0: Monday, 1: Tuesday, ..., 6: Sunday)
-# day_of_week = current_time.weekday()
-# days = ["วันจันทร์", "วันอังคาร", "วันพุธ", "วันพฤหัสบดี", "วันศุกร์", "วันเสาร์", "วันอาทิตย์"]
-# day_name = days[day_of_week]
-
-# # Dictionary mapping English month names to Thai month names
-# month_names_thai = {
-#     "January": "มกราคม",
-#     "February": "กุมภาพันธ์",
-#     "March": "มีนาคม",
-#     "April": "เมษายน",
-#     "May": "พฤษภาคม",
-#     "June": "มิถุนายน",
-#     "July": "กรกฎาคม",
-#     "August": "สิงหาคม",
-#     "September": "กันยายน",
-#     "October": "ตุลาคม",
-#     "November": "พฤศจิกายน",
-#     "December": "ธันวาคม"
-# }
-
-# month_name = current_time.strftime("%B")
-# month_name_thai = month_names_thai[month_name]
-
-# # Extract year, month, date, hour, and minute
-# year = current_time.year
-# month = current_time.month
-# date = current_time.day
-# hour = current_time.hour
-# minute = current_time.minute
-
-# current_day_text = day_name + "ที่ " + str(date) + " " + month_name_thai + " พ.ศ. " + str(year + 543) 
-# current_time_text = "เวลา " + str(hour) + ":" + str(minute)
 
 class DateTimeUpdater(QObject):
+    """
+    A class to continuously update date and time information and emit signals upon changes.
+
+    Attributes:
+        date_time_changed (pyqtSignal): Signal emitted upon updating date and time information.
+
+    Methods:
+        __init__: Initializes the DateTimeUpdater object and starts a QTimer for continuous updating.
+        update_date_time: Updates date and time information and emits the date_time_changed signal.
+    """
+
     date_time_changed = pyqtSignal(str)
 
     def __init__(self):
         super().__init__()
         self.timer = QTimer(self)
-        self.timer.timeout.connect(self.updateDateTime)
+        self.timer.timeout.connect(self.update_date_time)
         self.timer.start(1000)  # Update every second
 
-    def updateDateTime(self):
+    def update_date_time(self):
+        """
+        Function to update date and time information and emits the date_time_changed signal.
+        """
         # Create a QLocale object for Thai locale
         thai_locale = QLocale(QLocale.Thai)
         current_datetime = QDateTime.currentDateTime()

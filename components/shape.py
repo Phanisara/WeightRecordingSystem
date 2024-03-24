@@ -34,3 +34,23 @@ class Rectangle(QWidget):
         painter.setPen(QPen(self.line_color))
         painter.setBrush(QBrush(self.background_color, Qt.SolidPattern))
         painter.drawRoundedRect(self.x, self.y, self.w, self.h, self.x_radius, self.y_radius)
+
+class Line():
+    """
+    A class representing a line.
+
+    Attributes:
+        line_color (QColor): Color for the line.
+        x1 (int): X-coordinate position of the start point of the line.
+        y1 (int): Y-coordinate position of the start point of the line.
+        x2 (int): X-coordinate position of the end point of the line.
+        y2 (int): Y-coordinate position of the end point of the line.
+
+    Methods:
+        __init__: Initializes the Line object with provided parameters.
+    """
+    def __init__(self, painter, line_color, x1, y1, x2, y2):
+        super().__init__()  # Call the superclass constructor
+        self.line_color = line_color
+        painter.setPen(QPen(self.line_color))
+        painter.drawLine(x1, y1, x2, y2)

@@ -3,6 +3,24 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
 class Rectangle(QWidget):  
+    """
+    A class representing a rectangular shape.
+
+    This class inherits from QWidget.
+
+    Attributes:
+        line_color (QColor): Color for the border of the rectangle.
+        background_color (QColor): Background color of the rectangle.
+        x (int): X-coordinate position of the top-left corner of the rectangle.
+        y (int): Y-coordinate position of the top-left corner of the rectangle.
+        w (int): Width of the rectangle.
+        h (int): Height of the rectangle.
+        x_radius (int): X-axis radius for rounding the corners of the rectangle.
+        y_radius (int): Y-axis radius for rounding the corners of the rectangle.
+
+    Methods:
+        __init__: Initializes the Rectangle object with provided parameters.
+    """
     def __init__(self, painter, line_color, background_color, x, y, w, h, x_radius, y_radius):
         super().__init__()  # Call the superclass constructor
         self.line_color = line_color

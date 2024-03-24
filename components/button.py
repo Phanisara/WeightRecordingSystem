@@ -97,6 +97,46 @@ class ProfileButton(QGraphicsObject):
       text = self.text_label.text()
       self.click_flag = True
       self.clicked_text.emit(text, self) 
+   
+   def text(self):
+      """
+      Function to return the text displayed on the button.
 
-   def disable(self, style_disable):
-      self.object.setStyleSheet(style_disable)
+      Returns:
+         str: Text entered in the input text field.
+      """
+      return self.text_label.text()
+
+   def disable(self, style_disable=None):
+      """
+      Function to disable the button.
+
+      Args:
+         style (str, optional): The style sheet for the disabled button.
+      """
+      self.click_flag = True
+      self.object.setEnabled(False)
+      if style_disable:
+         self.object.setStyleSheet(style_disable)
+         self.text_label.setStyleSheet(f"color: {Color.darkgray}; background-color: transparent; font-weight: bold;")
+         
+         # creating a QGraphicsDropShadowEffect object 
+         shadow = QGraphicsDropShadowEffect() 
+         shadow.setBlurRadius(self.blur_radius) 
+         shadow.setColor(QColor(255, 255, 255)) 
+         self.object.setGraphicsEffect(shadow) 
+
+   def enable(self):
+      """
+      Function to enable the button.
+      """     
+      self.click_flag = False
+      self.object.setEnabled(True)
+      self.object.setStyleSheet(self.style)
+      self.text_label.setStyleSheet(f"color: {Color.darkgreen}; background-color: transparent; font-weight: bold;")
+      
+      # creating a QGraphicsDropShadowEffect object 
+      shadow = QGraphicsDropShadowEffect() 
+      shadow.setBlurRadius(self.blur_radius) 
+      shadow.setColor(self.blur_color) 
+      self.object.setGraphicsEffect(shadow) 

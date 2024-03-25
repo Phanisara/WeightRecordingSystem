@@ -43,6 +43,6 @@ class DateTimeUpdater(QObject):
         day_thai = thai_locale.dayName(day, QLocale.LongFormat)  # Long format (วันจันทร์, วันอังคาร, etc.)
         month_thai = thai_locale.monthName(month, QLocale.LongFormat)  # Long format (มกราคม, กุมภาพันธ์, etc.)
 
-        current_datetime_text = f"{day_thai}ที่ {str(date)} เดือน{month_thai} พ.ศ.{year}, เวลา {str(hour)}:{str(minute)}:{str(second)}"
+        current_datetime_text = f"{day_thai}ที่ {str(date)} เดือน{month_thai} พ.ศ.{year}, เวลา {str(hour)}:{str(minute)}:{str(second)} น."
 
         self.date_time_changed.emit(current_datetime_text)

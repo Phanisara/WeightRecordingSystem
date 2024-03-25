@@ -9,13 +9,12 @@ from components.shape import *
 from components.image import *
 from components.button import *
 from components.date_time import *
-from components.table import *
 from components.popup import *
 
-font_size_header = 25
-font_size_title  = 23
-font_size_button = 20
-font_size_detail = 18
+font_size_header = 20
+font_size_title  = 21
+font_size_button = 19
+font_size_detail = 17
 font_size_weight = 120
 input_machine = None
 
@@ -46,12 +45,12 @@ class MainWindow(QMainWindow):
         self.text_header_title = Text(self, f"ระบบชั่งและบันทึกน้ำหนักขยะ: {self.faculty_name}", "TH Sarabun New" , font_size_header,  90, 5, 900, 100, f"color: {Color.white}; background-color: {None}; font-weight: bold;", alignment=Qt.AlignVCenter)
         self.setting_icon = ImageButton(self,"./pics/settings.png", self.screen_geometry.width() - 60, 35, 35, 35)
         self.setting_icon.clicked.connect(self.pop_up_setting)
-        self.text_error_machine = Text(self, "กรุณาระบะชื่อเครื่องที่ปุ่มการตั้งค่า (มุมขวาบน) ก่อนเริ่มใช้งานระบบ", "TH Sarabun New" , font_size_detail,  40, 160, 500, 60, f"color: red; background-color: {None}; font-weight: bold;", alignment=Qt.AlignVCenter)
+        self.text_error_machine = Text(self, "กรุณาระบะชื่อเครื่องที่ปุ่มการตั้งค่า (มุมขวาบน) ก่อนเริ่มใช้งานระบบ", "TH Sarabun New" , font_size_detail,  40, 160, 700, 60, f"color: red; background-color: {None}; font-weight: bold;", alignment=Qt.AlignVCenter)
 
         # -------------------------------------------------------- Date time -------------------------------------------------------- 
         self.updater = DateTimeUpdater()
         self.current_time = "กำลังแสดงวันและเวลาในปัจจุบัน"
-        self.text_current_time = Text(self, self.current_time, "TH Sarabun New" , font_size_detail,  40, 120, 500, 60, f"color: {Color.darkgreen}; background-color: {None}; font-weight: bold;", alignment=Qt.AlignVCenter)
+        self.text_current_time = Text(self, self.current_time, "TH Sarabun New" , font_size_detail,  40, 120, 700, 60, f"color: {Color.darkgreen}; background-color: {None}; font-weight: bold;", alignment=Qt.AlignVCenter)
         self.updater.date_time_changed.connect(self.on_date_time_changed)
 
         # ------------------------------------------------------- Wight scale ------------------------------------------------------

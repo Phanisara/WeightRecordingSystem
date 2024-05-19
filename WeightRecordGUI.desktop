@@ -1,0 +1,4 @@
+[Desktop Entry]
+Type=Application
+Name=WeightRecordGUI
+Exec=/home/raspberrypi/planetcentric/WeightRecordingSystem_GUI/run_WeightRecordGUI.sh

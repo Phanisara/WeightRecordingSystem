@@ -2,7 +2,7 @@ import sys
 from PyQt5 import QtGui, QtCore, QtWidgets
 from PyQt5.QtCore import *
 from PyQt5.QtGui import QPixmap, QCursor
-from PyQt5.QtWidgets import QDialog, QApplication, QWidget, QComboBox, QHBoxLayout
+from PyQt5.QtWidgets import QDialog, QApplication, QWidget, QComboBox, QHBoxLayout, QMainWindow
 from components.color import *
 from components.text import *
 from components.shape import *
@@ -11,6 +11,12 @@ from components.button import *
 from components.date_time import *
 from components.popup import *
 
+import requests
+import threading
+import time
+import RPi.GPIO as GPIO
+from hx711 import HX711
+
 font_size_header = 20
 font_size_title  = 21
 font_size_button = 19
@@ -18,6 +24,17 @@ font_size_detail = 17
 font_size_weight = 120
 input_machine = None
 
+url_get_waste_machine_profile = "https://books-opening.gl.at.ply.gg:61345/api/v1/weightScale/machine/all"
+url_get_waste_profile = "https://books-opening.gl.at.ply.gg:61345/api/v1/weightScale/profile_of_waste/all"
+url_get_waste_history = "https://books-opening.gl.at.ply.gg:61345/api/v1/weightScale/record/all"
+url_post_data = 'https://books-opening.gl.at.ply.gg:61345/api/v1/weightScale/record/add'
+
+save_machine_name = None
+save_faculty_name = None
+save_waste_name = None
+save_button_event_flag = False
+save_weight = 0.0
+        
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__() 
@@ -25,7 +42,7 @@ class MainWindow(QMainWindow):
         self.screen = QGuiApplication.primaryScreen()
         self.screen_geometry = self.screen.geometry()
         self.create_component()
-    
+
     def create_component(self):
         """
         FUnction to create and initialize all the UI components required for the application.
@@ -188,7 +205,7 @@ class MainWindow(QMainWindow):
         # self.history_button = Button(self, "ประวัติการบันทึก", "TH Sarabun New" , font_size_button, 100, 720, 200, 60, self.style_history, Goto=self.gotoHistoryWindow, cursor=QtCore.Qt.PointingHandCursor)
         self.save_button = Button(self, "บันทึก", "TH Sarabun New" , font_size_button, 680, 720, 120, 60, self.style_save, Goto=self.click_save_profile, cursor=QtCore.Qt.PointingHandCursor)
         self.save_button.disable()
-        self.text_warning_save_profile = Text(self, "\"กรุณาเลือกประเภทของขยะก่อนกดบันทึก\"", "TH Sarabun New" , font_size_detail, 490, 800, 350, 40, f"color: red; background-color: {None}; font-weight: bold;", alignment=Qt.AlignVCenter)
+        self.text_warning_save_profile = Text(self, "\"กรุณาเลือกประเภทของขยะก่อนกดบันทึก\"", "TH Sarabun New" , font_size_detail, 400, 800, 450, 40, f"color: red; background-color: {None}; font-weight: bold;", alignment=Qt.AlignVCenter)
         self.text_warning_save_profile.hide()
 
         self.style_button_pop_up = " QPushButton{ \
@@ -247,6 +264,19 @@ class MainWindow(QMainWindow):
                                                     "orphan_waste": "ขยะกำพร้า",
                                                     "normal_waste": "ขยะทั่วไป",
                                                 }
+        
+        # Check machine name is in line 2 of profile.txt and Check faculty name is in line 1 of profile.txt
+        input_machine = self.check_machine_name_in_profile_file()
+        self.faculty_name  = self.check_faculty_name_in_profile_file()
+        if input_machine != None and self.faculty_name != None:
+            # Update profile waste and hide error message
+            self.update_profile_waste(input_machine)
+            self.text_header_title.set_text(f"ระบบชั่งและบันทึกน้ำหนักขยะ: {self.faculty_name}")
+            self.text_error_machine.hide()
+
+            self.text_header_title.set_text(f"ระบบชั่งและบันทึกน้ำหนักขยะ: {self.faculty_name}")
+        else:
+            print("Not have machine name in line 2 of profile.txt or faculty name in line 1 of profile.txt")
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -286,7 +316,8 @@ class MainWindow(QMainWindow):
         # Update old_object reference to currently clicked button
         self.old_object = self.currently_object
         # Retrieve and store the profile waste corresponding to the clicked button's text
-        self.select_profile_waste = self.all_name_profile_waste[text]
+        # self.select_profile_waste = self.all_name_profile_waste[text]
+        self.select_profile_waste = text
     
     def on_date_time_changed(self, formatted_date_time):
         """
@@ -312,11 +343,29 @@ class MainWindow(QMainWindow):
             None
         """
         self.input_machine = input_machine
-        print(self.input_machine)
-        profile_waste = ["can", "glass", "paper", "milk_box", "plastic_bottle", "plastic_straw", "plastic_cup_sell", "plastic_cup_nosell", "plastic_cutlery"]
 
-        # Convert English profile waste names to Thai
-        new_profile_waste = [self.all_profile_waste_english_to_thai[name] for name in profile_waste]
+        # -------------------- check list of waste with profile in database -------------------- 
+        
+        all_machine_profile = self.get_all_machine_profile()
+
+        profile_waste = []
+
+        for entry in all_machine_profile:
+            faculty = entry['faculty']
+            machine_name = entry['machine_name']
+            all_profiles = entry['all_profile']
+
+            if input_machine == machine_name and self.faculty_name == faculty:
+                profile_waste = all_profiles
+                self.write_profile_to_profile_file(self.faculty_name, input_machine) #update machine name to profile.txt
+                break
+
+        # ------------------------------------------------------------------------------------- 
+
+        # # Convert English profile waste names to Thai
+        # new_profile_waste = [self.all_profile_waste_english_to_thai[name] for name in profile_waste]
+        
+        new_profile_waste = profile_waste
 
         # Iterate through buttons and disable those whose text is in the list
         for button in [self.profile_can_button, self.profile_glass_button, self.profile_paper_button, self.profile_milk_box_button,
@@ -339,6 +388,12 @@ class MainWindow(QMainWindow):
         Returns:
             None
         """
+
+        global save_machine_name
+        global save_faculty_name
+        global save_waste_name
+        global save_button_event_flag
+        
         # Define the dimensions and position of the popup dialog
         self.width_pop_up = 800
         self.height_pop_up = 300
@@ -348,12 +403,20 @@ class MainWindow(QMainWindow):
         # Check if a profile waste is selected and a faculty name is provided
         if self.select_profile_waste and self.faculty_name != None:
             # Create and display the popup dialog
+            save_machine_name = self.input_machine
+            save_faculty_name = self.faculty_name
+            save_waste_name = self.select_profile_waste
+            save_button_event_flag = True
+
             self.popup = PopupDialog(PainterColor.lightgray, PainterColor.darkgreen, PainterColor.white, self.pos_x_pop_up, self.pos_y_pop_up, self.width_pop_up, self.height_pop_up, 10, 10, "การบันทึกเสร็จสมบูรณ์\nคุณสามารถนำขยะที่อยู่บนเครื่องชั่งลงได้", 800, 155, "TH Sarabun New" , font_size_title, 120, 60, self.style_button_pop_up)
             self.popup.move(0, 0)
             self.popup.resize(self.screen_geometry.width(), self.screen_geometry.height())
             self.popup.exec_()
             print("CLick save")
             print("Profile waste button: ", self.select_profile_waste)
+
+            self.select_profile_waste = None
+
         else:
             # Show a warning message if profile waste is not selected but click save button
             self.text_warning_save_profile.show()
@@ -401,13 +464,21 @@ class MainWindow(QMainWindow):
         # Retrieve the input machine name from the popup dialog
         input_machine = self.popup_setting.get_input()
 
-        # List of valid machine names
-        self.list_machine_name = ['FIBO_01']
+        # -------------------- check list of wate with profile in database -------------------- 
+        self.list_machine_name = []
+        all_machine_profile = self.get_all_machine_profile()
+        for entry in all_machine_profile:
+            faculty = entry['faculty']
+            machine_name = entry['machine_name']
+            self.list_machine_name.append(machine_name)
+            if input_machine == machine_name:
+                self.faculty_name = faculty
+                
+        # ------------------------------------------------------------------------------------- 
 
         # Check if the input machine name is valid
         if input_machine in self.list_machine_name:
             self.popup_setting.close()
-            self.faculty_name = 'สถาบันวิทยาการหุ่นยนต์ภาคสนาม'
             self.text_header_title.set_text(f"ระบบชั่งและบันทึกน้ำหนักขยะ: {self.faculty_name}")
             # Update profile waste and hide error message
             self.update_profile_waste(input_machine)
@@ -415,19 +486,151 @@ class MainWindow(QMainWindow):
         else:
             # Show error message if the input machine name is not valid
             self.popup_setting.show_error_message()
+    
+    def get_all_machine_profile(self):
+        try:
+            response = requests.get(url_get_waste_machine_profile , verify=False)
+            if response.status_code == 200:
+                    # print("Request successful!")
+                    response_json = response.json()
+                    # print("Response machine profile: " + str(response_json))
+                    return response_json
+            else:
+                # print("Request profile: failed with status code:", response.status_code)
+                return None
+        except requests.exceptions.RequestException as e:
+            # print("POST request failed:", e)
+            return None
 
-if __name__ == '__main__':
+    def check_faculty_name_in_profile_file(self):
+        try:
+            with open("profile.txt", "r") as file:
+                lines = file.readlines()
+                if len(lines) >= 1:
+                    data_line_1 = lines[0].strip()
+                    return data_line_1
+                else:
+                    return None
+        except FileNotFoundError:
+            return None
+
+    def check_machine_name_in_profile_file(self):
+        try:
+            with open("profile.txt", "r") as file:
+                lines = file.readlines()
+                if len(lines) >= 2:
+                    data_line_2 = lines[1].strip()
+                    return data_line_2
+                else:
+                    return None
+        except FileNotFoundError:
+            return None
+
+    def write_profile_to_profile_file(self,faculty_name,machine_name):
+        try:
+            with open("profile.txt", "w") as file:
+                file.write(faculty_name + "\n")  # Write name a to line 1
+                file.write(machine_name + "\n")  # Write name b to line 2
+            # print("Names have been written to profile.txt successfully.")
+        except Exception as e:
+            print(f"Error occurred: {e}")
+
+    def weight_measurement_update(self, value):
+        weight_value = str(format(value, '.2f'))
+        self.text_weight_value.set_text(weight_value)
+
+class Worker(QObject):
+    finished = pyqtSignal()
+
+    def __init__(self):
+        super().__init__()
+        self.is_running = True
+
+    def run(self):
+        while self.is_running:
+            # Do some work here
+            pass
+        self.finished.emit()
+
+    def stop(self):
+        self.is_running = False
+
+def weight_measurement(worker, mainWindow):
+    while worker.is_running:
+
+        global save_weight
+        
+        if save_weight < 10000.0:
+            save_weight = save_weight + 0.05
+            time.sleep(1)
+        
+        mainWindow.weight_measurement_update(save_weight)
+
+        pass
+        
+def send_data_to_database(worker):
+    while worker.is_running:
+
+        global save_machine_name
+        global save_faculty_name
+        global save_waste_name
+        global save_button_event_flag
+
+        if save_button_event_flag == True:
+
+            print(save_weight)
+
+            # auto generate: uuid, date, time after posted to url
+            data = {
+                'faculty': save_faculty_name,
+                'machine_name': save_machine_name,
+                'waste_profile': save_waste_name,
+                'weight': str(save_weight)
+            }
+
+            try:
+                response = requests.post(url_post_data, json=data, verify=False)
+                if response.status_code == 201:
+                    print("POST request successful (Created)")
+                    print("Response pose: "  + str(response.text))
+                    # Handle response data here
+                elif response.status_code == 200:
+                    print("POST request successful (OK)")
+                    print("Response pose: "  + str(response.text))
+                    # Handle response data here
+                else:
+                    print("POST request failed with status code:", response.status_code)
+            except requests.exceptions.RequestException as e:
+                print("POST request failed:", e)
+
+            save_machine_name = None
+            save_faculty_name = None
+            save_waste_name = None
+            save_button_event_flag = False
+
+        pass
+    
+if __name__ == "__main__":
     app = QApplication(sys.argv)
     widget = QtWidgets.QStackedWidget()
-    mainWindow    = MainWindow()
+    mainWindow = MainWindow()
     widget.addWidget(mainWindow)
-
-    # Find the width and height of full screen
     screen = QGuiApplication.primaryScreen()
     widget.showMaximized() 
 
     # Setting the title and icon of window
     widget.setWindowTitle("ระบบชั่งและบันทึกน้ำหนักขยะ")
     widget.setWindowIcon(QtGui.QIcon("pics/weight_icon.png"))
-    sys.exit(app.exec_()) 
+
+    worker = Worker()
     
+    # Start threads
+    weight_measurement_thread = threading.Thread(target=weight_measurement, args=(worker, mainWindow))
+    send_data_to_database_thread = threading.Thread(target=send_data_to_database, args=(worker, ))
+
+    weight_measurement_thread.start()
+    send_data_to_database_thread.start()
+
+    app.aboutToQuit.connect(worker.stop)
+
+    sys.exit(app.exec_()) 
